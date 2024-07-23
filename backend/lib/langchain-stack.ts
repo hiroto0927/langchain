@@ -38,7 +38,13 @@ export class LangChainStack extends cdk.Stack {
         statements: [
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            actions: ["bedrock:*", "logs:*"],
+            actions: [
+              "bedrock:InvokeModel",
+              "bedrock:InvokeModelWithResponseStream",
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents",
+            ],
             resources: ["*"],
           }),
           new iam.PolicyStatement({
@@ -55,7 +61,7 @@ export class LangChainStack extends cdk.Stack {
     );
 
     const fn = new lambda.Function(this, "LangchainLambdaFunction", {
-      functionName: "LangchainAiLambdaFunction",
+      functionName: "LangchainLambdaFunction",
       runtime: lambda.Runtime.FROM_IMAGE,
       architecture: lambda.Architecture.X86_64,
       timeout: cdk.Duration.seconds(30),
