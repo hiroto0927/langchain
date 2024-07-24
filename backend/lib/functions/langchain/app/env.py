@@ -1,3 +1,3 @@
 import os
 
-DB_NAME = os.getenv('DB_NAME')
+DB_NAME = os.environ["DB_NAME"]

@@ -1,10 +1,15 @@
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts.prompt import PromptTemplate
 from langchain_aws.chat_models import ChatBedrock
-from langchain.chains.conversation.base import ConversationChain
 from langchain.memory import ConversationBufferMemory
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
+from langchain.agents.agent import AgentExecutor
+from langchain_core.prompts.chat import MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_tool_calling_agent
+from langchain.agents.agent import AgentExecutor
 import json
 from app.request_model import RequestModel
+from app.tools import tools
 
 llm = ChatBedrock(
     model_id="anthropic.claude-v2:1",
@@ -18,7 +23,6 @@ llm = ChatBedrock(
 
 def chat_conversation(session_id: str, input_text: str) -> str:
 
-    # Historyモジュール (Memoryの内容を外部記憶を使って永続化する)
     history = DynamoDBChatMessageHistory(
         table_name="ChatMessageHistory",
         session_id=session_id,
@@ -27,39 +31,38 @@ def chat_conversation(session_id: str, input_text: str) -> str:
         ttl_key_name="TTL",
     )
 
-    # Memoryモジュール (会話履歴を記憶する)
     memory = ConversationBufferMemory(
         chat_memory=history,
         return_messages=True,
     )
 
-    chain = ConversationChain(llm=llm, verbose=True, memory=memory)
-
-    messages = [
-        SystemMessage(
-            content="""You are an excellent programmer. Please answer programming questions only. If a question is unclear, please respond with “The question is unclear. Please be specific.” and ask for more details. If there is an error in your previous response, please reexamine the content and provide an accurate response. Please generate your response in Japanese and code it in code blocks."""
+    prompt = ChatPromptTemplate.from_messages([
+        SystemMessagePromptTemplate(
+            prompt=PromptTemplate(input_variables=[
+            ], template="""あなたは、優秀なアシスタントです。正確な情報をするためにツールを適宜活用してください。""")
         ),
-        HumanMessage(
-            content=input_text
+        MessagesPlaceholder(variable_name='chat_history', optional=True),
+        HumanMessagePromptTemplate(
+            prompt=PromptTemplate(
+                input_variables=["input"], template='{input}')
         ),
-    ]
+        MessagesPlaceholder(variable_name='agent_scratchpad')
+    ])
 
-    result = chain.invoke(messages)
-    output_text = result.get("response")
+    agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
 
-    return output_text
+    agent_exec = AgentExecutor(
+        agent=agent, tools=tools, verbose=True, memory=memory)
+    result = agent_exec.invoke(input={"input": input_text})
+
+    return result.get("output")
 
 
 def lambda_handler(event, context):
 
     body = json.loads(event["body"])
 
-    print(body)
-
     request = RequestModel.model_validate(body)
-
-    print(request.session_id)
-    print(request.prompt)
 
     try:
         output_text = chat_conversation(request.session_id, request.prompt)
