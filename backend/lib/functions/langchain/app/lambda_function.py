@@ -1,15 +1,18 @@
-from langchain_core.prompts.prompt import PromptTemplate
 from langchain_aws.chat_models import ChatBedrock
-from langchain.memory import ConversationBufferMemory
+from langchain_core.messages import SystemMessage
+from langchain.memory import ConversationBufferWindowMemory
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
-from langchain.agents.agent import AgentExecutor
-from langchain_core.prompts.chat import MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts.chat import MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.agents import create_tool_calling_agent
-from langchain.agents.agent import AgentExecutor
+from langchain.agents import create_openai_tools_agent, AgentExecutor, create_tool_calling_agent
 import json
 from app.request_model import RequestModel
 from app.tools import tools
+
+from langchain.globals import set_debug
+
+set_debug(True)
+
 
 llm = ChatBedrock(
     model_id="anthropic.claude-v2:1",
@@ -31,20 +34,18 @@ def chat_conversation(session_id: str, input_text: str) -> str:
         ttl_key_name="TTL",
     )
 
-    memory = ConversationBufferMemory(
+    memory = ConversationBufferWindowMemory(
         chat_memory=history,
         return_messages=True,
+        k=3
     )
 
     prompt = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate(
-            prompt=PromptTemplate(input_variables=[
-            ], template="""あなたは、優秀なアシスタントです。正確な情報をするためにツールを適宜活用してください。""")
-        ),
-        MessagesPlaceholder(variable_name='chat_history', optional=True),
-        HumanMessagePromptTemplate(
-            prompt=PromptTemplate(
-                input_variables=["input"], template='{input}')
+        SystemMessage(
+            content="あなたは、優秀なアシスタントです。正確な情報を提供し、わからなければツールを適宜活用または、「わからない」と回答してください。"),
+        *memory.chat_memory.messages,
+        HumanMessagePromptTemplate.from_template(
+            input_variables=["input"], template="{input}"
         ),
         MessagesPlaceholder(variable_name='agent_scratchpad')
     ])
