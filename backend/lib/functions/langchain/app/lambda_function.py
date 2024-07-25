@@ -1,27 +1,25 @@
 from langchain_aws.chat_models import ChatBedrock
-from langchain_core.messages import SystemMessage
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
-from langchain_core.prompts.chat import MessagesPlaceholder, HumanMessagePromptTemplate
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.agents import create_openai_tools_agent, AgentExecutor, create_tool_calling_agent
+from langchain.agents import AgentExecutor,  create_react_agent
+from langchain_community.agent_toolkits.load_tools import load_tools
 import json
 from app.request_model import RequestModel
-from app.tools import tools
+from langchain import hub
 
 from langchain.globals import set_debug
 
 set_debug(True)
-
-
-llm = ChatBedrock(
-    model_id="anthropic.claude-v2:1",
+model = ChatBedrock(
+    model_id="anthropic.claude-instant-v1",
     model_kwargs={
         "max_tokens": 2000,
-        "temperature": 0.8,
+        "temperature": 0.0001,
     },
     region_name="ap-northeast-1"
 )
+tools = load_tools(["ddg-search"])
+prompt = hub.pull("hwchase17/react")
 
 
 def chat_conversation(session_id: str, input_text: str) -> str:
@@ -40,21 +38,12 @@ def chat_conversation(session_id: str, input_text: str) -> str:
         k=3
     )
 
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessage(
-            content="あなたは、優秀なアシスタントです。正確な情報を提供し、わからなければツールを適宜活用または、「わからない」と回答してください。"),
-        *memory.chat_memory.messages,
-        HumanMessagePromptTemplate.from_template(
-            input_variables=["input"], template="{input}"
-        ),
-        MessagesPlaceholder(variable_name='agent_scratchpad')
-    ])
+    agent = create_react_agent(model, tools, prompt)
 
-    agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
-
-    agent_exec = AgentExecutor(
-        agent=agent, tools=tools, verbose=True, memory=memory)
-    result = agent_exec.invoke(input={"input": input_text})
+    agent_chain = AgentExecutor(
+        agent=agent, tools=tools, verbose=True, handle_parsing_errors=True, memory=memory)
+    result = agent_chain.invoke(
+        {"input": input_text})
 
     return result.get("output")
 

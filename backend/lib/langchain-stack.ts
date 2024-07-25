@@ -65,7 +65,7 @@ export class LangChainStack extends cdk.Stack {
       runtime: lambda.Runtime.FROM_IMAGE,
       architecture: lambda.Architecture.X86_64,
       timeout: cdk.Duration.seconds(60),
-      memorySize: 256,
+      memorySize: 128,
       code: lambda.Code.fromEcrImage(props.ecrRepo),
       handler: lambda.Handler.FROM_IMAGE,
       role: role,
