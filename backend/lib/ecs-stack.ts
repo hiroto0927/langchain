@@ -62,6 +62,12 @@ export class EcsClusterStack extends cdk.Stack {
       "Allow SSH traffic"
     );
 
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(8000),
+      "Allow traffic on port 8000"
+    );
+
     const launchTemplate = new ec2.LaunchTemplate(
       this,
       "DefaultLaunchTemplate",
