@@ -1,0 +1,19 @@
+{
+  "version": "0",
+  "id": "05e52dfb-f12f-c8e4-08c5-2ee1bacad8dd",
+  "detail-type": "ECR Image Action",
+  "source": "aws.ecr",
+  "account": "859871104911",
+  "time": "2024-07-28T15:53:32Z",
+  "region": "ap-northeast-1",
+  "resources": [],
+  "detail": {
+    "result": "SUCCESS",
+    "repository-name": "langchain-repo",
+    "image-digest": "sha256:46dd4f98f27c06bf57cbded7bb5ffa1ba11e3bfb3b71351b82f713cd7ccdd605",
+    "action-type": "PUSH",
+    "artifact-media-type": "application/vnd.docker.container.image.v1+json",
+    "image-tag": "latest",
+    "manifest-media-type": "application/vnd.docker.distribution.manifest.v2+json"
+  }
+}

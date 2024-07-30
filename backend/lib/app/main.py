@@ -5,7 +5,7 @@ app = FastAPI()
 
 @app.get("/api/health-check")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok!!"}
 
 
 @app.get("/api/hello")
