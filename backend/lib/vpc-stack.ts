@@ -17,6 +17,11 @@ export class VpcStack extends cdk.Stack {
           name: "langchain-public-subnet",
           subnetType: ec2.SubnetType.PUBLIC,
         },
+        {
+          cidrMask: 24,
+          name: "langchain-private-subnet",
+          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        },
       ],
     });
 

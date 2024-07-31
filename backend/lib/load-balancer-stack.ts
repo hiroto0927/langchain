@@ -2,7 +2,6 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ecs from "aws-cdk-lib/aws-ecs";
 
 type TProps = cdk.StackProps & {
   vpc: ec2.Vpc;
@@ -12,6 +11,7 @@ type TProps = cdk.StackProps & {
 export class LoadBalancerStack extends cdk.Stack {
   public listener: elbv2.ApplicationListener;
   public targetGroup: elbv2.ApplicationTargetGroup;
+  public lbSecurityGroup: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props: TProps) {
     super(scope, id, props);
@@ -29,6 +29,7 @@ export class LoadBalancerStack extends cdk.Stack {
       vpc: props.vpc,
       securityGroup: securityGroupELB,
       internetFacing: true,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
     });
 
     const targetGroup = new elbv2.ApplicationTargetGroup(
@@ -77,5 +78,6 @@ export class LoadBalancerStack extends cdk.Stack {
 
     this.listener = listener;
     this.targetGroup = targetGroup;
+    this.lbSecurityGroup = securityGroupELB;
   }
 }

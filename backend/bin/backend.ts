@@ -13,16 +13,17 @@ const ecrRepo = new EcrRepoStack(app, "EcrRepoStack", {});
 //   ecrRepo: ecrRepo.repository,
 // });
 
-const ecsCluster = new EcsClusterStack(app, "EcsClusterStack", {
-  vpc: vpc.vpc,
-});
-
-ecsCluster.addDependency(vpc);
-
 const lb = new LoadBalancerStack(app, "LoadBalancerStack", {
   vpc: vpc.vpc,
   containerPort: 8000,
 });
+
+const ecsCluster = new EcsClusterStack(app, "EcsClusterStack", {
+  vpc: vpc.vpc,
+  lbPubSecurityGroup: lb.lbSecurityGroup,
+});
+
+ecsCluster.addDependency(vpc);
 
 const ecsService = new EcsTaskDefStack(app, "EcsTaskDefStack", {
   vpc: vpc.vpc,
@@ -32,4 +33,3 @@ const ecsService = new EcsTaskDefStack(app, "EcsTaskDefStack", {
 });
 
 lb.targetGroup.addTarget(ecsService.service);
-lb.addDependency(ecsCluster);

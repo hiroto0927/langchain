@@ -7,6 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 
 type TProps = cdk.StackProps & {
   vpc: ec2.Vpc;
+  lbPubSecurityGroup: ec2.SecurityGroup;
 };
 
 export class EcsClusterStack extends cdk.Stack {
@@ -68,6 +69,12 @@ export class EcsClusterStack extends cdk.Stack {
       "Allow traffic on port 8000"
     );
 
+    securityGroup.addIngressRule(
+      props.lbPubSecurityGroup,
+      ec2.Port.tcp(8000),
+      "Allow traffic from ALB"
+    );
+
     const launchTemplate = new ec2.LaunchTemplate(
       this,
       "DefaultLaunchTemplate",
@@ -83,6 +90,8 @@ export class EcsClusterStack extends cdk.Stack {
       }
     );
 
+    launchTemplate.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+
     const autoScalingGroup = new autoscaling.AutoScalingGroup(
       this,
       "DefaultAutoScalingGroup",
@@ -91,9 +100,14 @@ export class EcsClusterStack extends cdk.Stack {
         launchTemplate: launchTemplate,
         minCapacity: 1,
         maxCapacity: 2,
-        healthCheck: autoscaling.HealthCheck.ec2(),
+        healthCheck: autoscaling.HealthCheck.ec2({
+          grace: cdk.Duration.seconds(5),
+        }),
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       }
     );
+
+    autoScalingGroup.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
 
     const capacityProvider = new ecs.AsgCapacityProvider(
       this,
@@ -106,6 +120,7 @@ export class EcsClusterStack extends cdk.Stack {
     );
 
     cluster.addAsgCapacityProvider(capacityProvider);
+    cluster.connections.allowTo(securityGroup, ec2.Port.allTraffic());
 
     this.cluster = cluster;
   }
