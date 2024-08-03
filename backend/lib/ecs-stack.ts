@@ -48,42 +48,6 @@ export class EcsClusterStack extends cdk.Stack {
     });
 
     securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(22),
-      "Allow SSH traffic"
-    );
-
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(2376),
-      "Allow Docker Daemon traffic"
-    );
-
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(2375),
-      "Allow Docker Daemon traffic"
-    );
-
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(51678),
-      "Allow Docker Daemon traffic"
-    );
-
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(51679),
-      "Allow Docker Daemon traffic"
-    );
-
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(8000),
-      "Allow traffic on port 8000"
-    );
-
-    securityGroup.addIngressRule(
       props.lbPubSecurityGroup,
       ec2.Port.tcp(8000),
       "Allow traffic from ALB"
@@ -134,8 +98,6 @@ export class EcsClusterStack extends cdk.Stack {
     );
 
     cluster.addAsgCapacityProvider(capacityProvider);
-    cluster.connections.allowTo(securityGroup, ec2.Port.allTraffic());
-    cluster.connections.allowFrom(securityGroup, ec2.Port.allTraffic());
 
     this.cluster = cluster;
   }
