@@ -49,18 +49,32 @@ export class EcsClusterStack extends cdk.Stack {
 
     securityGroup.addIngressRule(
       ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(80),
-      "Allow HTTP traffic"
-    );
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(443),
-      "Allow HTTPS traffic"
-    );
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
       ec2.Port.tcp(22),
       "Allow SSH traffic"
+    );
+
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(2376),
+      "Allow Docker Daemon traffic"
+    );
+
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(2375),
+      "Allow Docker Daemon traffic"
+    );
+
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(51678),
+      "Allow Docker Daemon traffic"
+    );
+
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(51679),
+      "Allow Docker Daemon traffic"
     );
 
     securityGroup.addIngressRule(
@@ -103,7 +117,7 @@ export class EcsClusterStack extends cdk.Stack {
         healthCheck: autoscaling.HealthCheck.ec2({
           grace: cdk.Duration.seconds(5),
         }),
-        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       }
     );
 
@@ -121,6 +135,7 @@ export class EcsClusterStack extends cdk.Stack {
 
     cluster.addAsgCapacityProvider(capacityProvider);
     cluster.connections.allowTo(securityGroup, ec2.Port.allTraffic());
+    cluster.connections.allowFrom(securityGroup, ec2.Port.allTraffic());
 
     this.cluster = cluster;
   }
