@@ -1,4 +1,0 @@
-curl -X POST \
-      'https://pkhda454s7dfmazjnren5ux7n40khzom.lambda-url.ap-northeast-1.on.aws/' \
-      -H 'content-type: application/json' \
-      -d '{ "example": "test" }'

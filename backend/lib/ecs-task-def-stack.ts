@@ -62,7 +62,7 @@ export class EcsTaskDefStack extends cdk.Stack {
     taskDefinition.addContainer("DefaultContainer", {
       image: ecs.ContainerImage.fromEcrRepository(props.ecrRepo),
       memoryLimitMiB: 512,
-      //   gpuCount: 1,
+      // gpuCount: 1,
       portMappings: [
         {
           containerPort: props.containerPort,

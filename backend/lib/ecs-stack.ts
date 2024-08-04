@@ -7,7 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 
 type TProps = cdk.StackProps & {
   vpc: ec2.Vpc;
-  lbPubSecurityGroup: ec2.SecurityGroup;
+  lbSecurityGroup: ec2.SecurityGroup;
 };
 
 export class EcsClusterStack extends cdk.Stack {
@@ -33,9 +33,6 @@ export class EcsClusterStack extends cdk.Stack {
           "service-role/AmazonEC2ContainerServiceforEC2Role"
         ),
         iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "service-role/AmazonEC2RoleforSSM"
-        ),
-        iam.ManagedPolicy.fromAwsManagedPolicyName(
           "service-role/AmazonEC2ContainerServiceAutoscaleRole"
         ),
       ],
@@ -48,7 +45,7 @@ export class EcsClusterStack extends cdk.Stack {
     });
 
     securityGroup.addIngressRule(
-      props.lbPubSecurityGroup,
+      props.lbSecurityGroup,
       ec2.Port.tcp(8000),
       "Allow traffic from ALB"
     );
