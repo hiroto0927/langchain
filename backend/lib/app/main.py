@@ -1,17 +1,47 @@
+from langchain_community.tools import DuckDuckGoSearchRun, Tool
+from langchain_community.document_loaders import WebBaseLoader
+from langchain.agents.agent import AgentExecutor
+from langchain.memory import ConversationBufferWindowMemory
 from fastapi import FastAPI
-from pydantic import BaseModel
 from pydantic import BaseModel, Field
+from langchain_aws.chat_models import ChatBedrock
 import uuid
-from langchain_aws import BedrockLLM
+from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
 import time
+from langchain.agents.structured_chat.base import create_structured_chat_agent
+from app.prompt import prompt as template_prompt
 
-llm = BedrockLLM(
-    model_id="anthropic.claude-instant-v1",
+
+def web_page_reader(url: str) -> str:
+    loader = WebBaseLoader(url)
+    content = loader.load()[0].page_content
+    return content
+
+
+search = DuckDuckGoSearchRun()
+
+tools = [
+    Tool(
+        name="duckduckgo-search",
+        func=search.run,
+        description="useful for when you need to search for latest information in web",
+    ),
+    Tool(
+        name="WebBaseLoader",
+        func=web_page_reader,
+        description="このツールは引数でURLを渡された場合に内容をテキストで返却します。引数にはURLの文字列のみを受け付けます。URLを渡された場合のみ利用してください。"
+    ),
+]
+
+
+llm = ChatBedrock(
+    model_id="anthropic.claude-3-haiku-20240307-v1:0",
     model_kwargs={
-        "max_tokens_to_sample": 2000,
-        "temperature": 0.8,
+        "max_tokens": 2000,
+        "temperature": 0.001,
     },
-    region_name="ap-northeast-1"
+    region_name="ap-northeast-1",
+    # streaming=True
 )
 
 
@@ -45,7 +75,39 @@ def health_check():
 @app.post("/api/chat")
 def chat(request: Request):
 
-    result = llm.invoke(input=request.prompt)
-    # response = Response(session_id=request.session_id, message=result.get("response"))
+    output_text = chat_conversation(request.session_id, request.prompt)
 
-    return result
+    return Response(session_id=request.session_id, message=output_text)
+
+
+def chat_conversation(session_id: str, input_text: str) -> str:
+
+    history = DynamoDBChatMessageHistory(
+        table_name="ChatMessageHistory",
+        session_id=session_id,
+        primary_key_name="SessionId",
+        ttl=604800,  # 1週間
+        ttl_key_name="TTL",
+    )
+
+    memory = ConversationBufferWindowMemory(
+        memory_key="chat_history",
+        chat_memory=history,
+        return_messages=True,
+        k=5
+    )
+
+    prompt = template_prompt
+
+    if memory.chat_memory.messages:
+        prompt = prompt.partial(chat_history=memory.chat_memory.messages)
+
+    agent = create_structured_chat_agent(llm, tools, prompt)
+
+    agent_exec = AgentExecutor(
+        agent=agent, tools=tools, return_intermediate_steps=True, memory=memory, handle_parsing_errors=True)
+
+    result = agent_exec.invoke(
+        {"input": input_text, "chat_history": memory.chat_memory.messages})
+
+    return result.get("output")
